@@ -1,0 +1,10 @@
+
+# Ignore all model files
+models/
+
+# Ignore all data files
+data/
+
+# Ignore Python specific files
+__pycache__/
+venv/
