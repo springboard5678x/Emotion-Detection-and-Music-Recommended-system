@@ -1,0 +1,9 @@
+# requirements.txt
+
+tensorflow
+pandas
+scikit-learn
+opencv-python
+streamlit
+Pillow
+matplotlib
