@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>MoodMate</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>MoodMate 🎧</h1>
+
+  <div class="card">
+    <h2>🎭 Express Your Mood & Discover Music</h2>
+    <textarea id="sentence" rows="4" cols="60" placeholder="How are you feeling today? Share your thoughts..."></textarea><br>
+    <button id="moodButton" onclick="predictTextAndRecommend()">
+      <span class="button-text">🎵 Get My Mood Music</span>
+      <span class="loading-spinner" style="display: none;">
+        <div class="spinner"></div>
+        <span>Analyzing your mood...</span>
+      </span>
+    </button>
+    <div id="emotionResult"></div>
+    <div id="recommendationsResult"></div>
+  </div>
+
+  <script>
+    const backend = "http://127.0.0.1:8000";
+
+    async function predictTextAndRecommend(){
+      const text = document.getElementById("sentence").value;
+      if (!text.trim()) {
+        showError("Please enter some text first!");
+        return;
+      }
+      
+      // Show loading state
+      setLoadingState(true);
+      
+      try {
+        // First, predict the emotion
+        const emotionRes = await fetch(`${backend}/predict_text/?sentence=${encodeURIComponent(text)}`);
+        const emotionData = await emotionRes.json();
+        
+        // Display the emotion result with animation
+        showEmotionResult(emotionData);
+        
+        // Then get song recommendations for that emotion
+        const songsRes = await fetch(`${backend}/recommend_songs/?emotion=${encodeURIComponent(emotionData.predicted_emotion)}`);
+        const songsData = await songsRes.json();
+        
+        // Display the song recommendations with animation
+        showSongRecommendations(songsData);
+        
+      } catch (error) {
+        showError('Error: ' + error.message);
+      } finally {
+        // Hide loading state
+        setLoadingState(false);
+      }
+    }
+
+    function setLoadingState(isLoading) {
+      const button = document.getElementById("moodButton");
+      const buttonText = button.querySelector(".button-text");
+      const loadingSpinner = button.querySelector(".loading-spinner");
+      
+      if (isLoading) {
+        button.disabled = true;
+        buttonText.style.display = "none";
+        loadingSpinner.style.display = "flex";
+        button.classList.add("loading");
+      } else {
+        button.disabled = false;
+        buttonText.style.display = "inline";
+        loadingSpinner.style.display = "none";
+        button.classList.remove("loading");
+      }
+    }
+
+    function showEmotionResult(emotionData) {
+      const emotionResult = document.getElementById("emotionResult");
+      emotionResult.innerHTML = `
+        <div class="emotion-display fade-in">
+          <h3>🎭 Detected Emotion: <span class="emotion-${emotionData.predicted_emotion}">${emotionData.predicted_emotion.toUpperCase()}</span></h3>
+        </div>
+      `;
+    }
+
+    function showSongRecommendations(songsData) {
+      const recommendationsResult = document.getElementById("recommendationsResult");
+      
+      if (songsData.recommendations && songsData.recommendations.length > 0) {
+        let songsHtml = '<div class="recommendations fade-in"><h3>🎵 Recommended Songs:</h3><div class="song-list">';
+        songsData.recommendations.forEach((song, index) => {
+          songsHtml += `
+            <div class="song-item slide-in" style="animation-delay: ${index * 0.1}s">
+              <div class="song-number">${index + 1}</div>
+              <div class="song-info">
+                <div class="song-title">${song.name}</div>
+                <div class="song-artist">by ${song.artist}</div>
+                <div class="song-album">from ${song.album}</div>
+                <a href="${song.url}" target="_blank" class="spotify-link">🎧 Listen on Spotify</a>
+              </div>
+            </div>
+          `;
+        });
+        songsHtml += '</div></div>';
+        recommendationsResult.innerHTML = songsHtml;
+      } else {
+        recommendationsResult.innerHTML = '<div class="error fade-in">No songs found for this emotion.</div>';
+      }
+    }
+
+    function showError(message) {
+      const emotionResult = document.getElementById("emotionResult");
+      const recommendationsResult = document.getElementById("recommendationsResult");
+      emotionResult.innerHTML = `<div class="error fade-in">${message}</div>`;
+      recommendationsResult.innerHTML = '';
+    }
+
+  </script>
+</body>
+</html>

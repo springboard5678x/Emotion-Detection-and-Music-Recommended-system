@@ -1,0 +1,269 @@
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #333;
+    padding: 20px;
+    min-height: 100vh;
+    margin: 0;
+  }
+  
+  h1 {
+    color: white;
+    text-align: center;
+    font-size: 2.5em;
+    margin-bottom: 30px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+  }
+  
+  .card {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    margin: 20px auto;
+    width: 80%;
+    max-width: 600px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    backdrop-filter: blur(10px);
+  }
+  
+  button {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 1.1em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    position: relative;
+    overflow: hidden;
+    min-width: 200px;
+  }
+  
+  button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+  }
+  
+  button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+  }
+  
+  button.loading {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    animation: pulse 2s infinite;
+  }
+  
+  .loading-spinner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+  textarea {
+    width: 100%;
+    padding: 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 15px;
+    font-size: 1em;
+    font-family: inherit;
+    resize: vertical;
+    transition: border-color 0.3s ease;
+    box-sizing: border-box;
+  }
+  
+  textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+  
+  .emotion-display {
+    margin: 15px 0;
+    padding: 20px;
+    background: linear-gradient(135deg, #e8f5e8, #f1f8e9);
+    border-radius: 15px;
+    border-left: 5px solid #2e7d32;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transform: translateY(0);
+    opacity: 1;
+  }
+  
+  .fade-in {
+    animation: fadeIn 0.6s ease-out;
+  }
+  
+  .slide-in {
+    animation: slideIn 0.5s ease-out forwards;
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  .emotion-sad { color: #1976d2; }
+  .emotion-happy { color: #f57c00; }
+  .emotion-angry { color: #d32f2f; }
+  .emotion-calm { color: #388e3c; }
+  
+  .recommendations {
+    margin-top: 20px;
+  }
+  
+  .song-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .song-item {
+    display: flex;
+    align-items: center;
+    background: linear-gradient(135deg, #f8f9fa, #ffffff);
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  
+  .song-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    border-color: #667eea;
+  }
+  
+  .song-number {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 15px;
+    flex-shrink: 0;
+    font-size: 0.9em;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+  }
+  
+  .song-item:hover .song-number {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  
+  .song-info {
+    flex: 1;
+  }
+  
+  .song-title {
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 4px;
+  }
+  
+  .song-artist {
+    color: #666;
+    font-size: 0.9em;
+    margin-bottom: 2px;
+  }
+  
+  .song-album {
+    color: #888;
+    font-size: 0.8em;
+    margin-bottom: 6px;
+  }
+  
+  .spotify-link {
+    color: #1db954;
+    text-decoration: none;
+    font-size: 0.9em;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: rgba(29, 185, 84, 0.1);
+    transition: all 0.3s ease;
+    display: inline-block;
+    margin-top: 4px;
+  }
+  
+  .spotify-link:hover {
+    background: rgba(29, 185, 84, 0.2);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(29, 185, 84, 0.3);
+  }
+  
+  .error {
+    color: #d32f2f;
+    background: linear-gradient(135deg, #ffebee, #fce4ec);
+    padding: 15px;
+    border-radius: 12px;
+    margin: 10px 0;
+    border-left: 4px solid #d32f2f;
+    box-shadow: 0 2px 8px rgba(211, 47, 47, 0.1);
+  }
+  
+  /* Add some floating particles animation for the background */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1.5" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="80" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="90" cy="90" r="2.5" fill="rgba(255,255,255,0.1)"/><circle cx="10" cy="60" r="1.5" fill="rgba(255,255,255,0.1)"/></svg>') repeat;
+    animation: float 20s linear infinite;
+    pointer-events: none;
+    z-index: -1;
+  }
+  
+  @keyframes float {
+    0% { transform: translateY(0px); }
+    100% { transform: translateY(-100px); }
+  }
+  
