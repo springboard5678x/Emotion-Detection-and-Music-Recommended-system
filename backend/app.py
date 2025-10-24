@@ -11,8 +11,7 @@ MODEL_PATH = "best_bert_emotion_model.pth"
 TOKENIZER_DIR = "bert_emotion_tokenizer"
 CSV_PATH = "moodify_light.csv"
 
-CLIENT_ID = "90196bf080544bc8b1a40a989b291c03"
-CLIENT_SECRET = "552a5d1183654a6f9f1cb33bee715199"
+
 
 app = FastAPI()
 
@@ -49,3 +48,4 @@ def recommend_songs_api(emotion: str, count: int = 5):
         return {"emotion": emotion, "recommendations": recommendations}
     except Exception as e:
         return {"error": str(e)}
+
