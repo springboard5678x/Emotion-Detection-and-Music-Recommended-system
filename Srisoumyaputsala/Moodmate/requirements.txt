@@ -1,0 +1,9 @@
+tensorflow==2.16.1
+gradio==4.36.1
+pandas
+scikit-learn
+Pillow
+tensorflow
+opencv-python
+streamlit
+numpy
