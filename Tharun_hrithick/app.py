@@ -8,9 +8,10 @@ import re
 import pickle
 import sys
 import os
+from datetime import datetime
+from collections import deque
 
 # --- 1. Define the EXACT same Model Class from training_test.py ---
-# This MUST match the model architecture from training
 class EmotionModel(nn.Module):
     def __init__(self, vocab_size, embedding_dim, hidden_dim, num_classes, num_layers, dropout_prob):
         super(EmotionModel, self).__init__()
@@ -29,7 +30,6 @@ class EmotionModel(nn.Module):
     def forward(self, x):
         embedded = self.embedding(x)
         lstm_out, (hidden, cell) = self.lstm(embedded)
-        # Concatenate the final forward and backward hidden states
         hidden = torch.cat((hidden[-2, :, :], hidden[-1, :, :]), dim=1)
         dropped = self.dropout(hidden)
         output = self.fc(dropped)
@@ -39,13 +39,12 @@ class EmotionModel(nn.Module):
 def clean_text(text):
     """Cleans text in the same way as the training script."""
     text = str(text).lower()
-    text = re.sub(r'[^a-z\s]', '', text) # Keep only letters and spaces
-    text = re.sub(r'\s+', ' ', text).strip() # Remove extra whitespace
+    text = re.sub(r'[^a-z\s]', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
     return text
 
 def text_to_sequence(text, vocab):
     """Converts text to a sequence of integers using the vocab."""
-    # Use 1 for <unk> (unknown word)
     return [vocab.get(word, 1) for word in text.split()] 
 
 def pad_sequence(seq, max_len):
@@ -53,18 +52,14 @@ def pad_sequence(seq, max_len):
     if len(seq) > max_len:
         return seq[:max_len]
     else:
-        # Use 0 for <pad> (padding)
         return seq + [0] * (max_len - len(seq)) 
 
 # --- 3. Load Artifacts ---
-# Define paths for ALL required files
 MODEL_PATH = 'emotion_detection_pytorch_improved.pth'
-# LABEL_ENCODER_PATH = 'label_encoder.pkl' # <-- We DO NOT NEED this file
 MUSIC_DATA_PATH = 'cleaned_music_sentiment_dataset.csv'
 SIMILARITY_MATRIX_PATH = 'new_dataset_similarity_matrix_tags.npy'
 SONG_INDICES_PATH = 'new_dataset_song_indices_tags.pkl'
 
-# Helper function to check for files
 def check_files():
     files_needed = [
         MODEL_PATH, 
@@ -76,36 +71,33 @@ def check_files():
     if missing_files:
         print(f"!!! FATAL ERROR: Missing required files: {missing_files} !!!")
         print("Please make sure all model and data files are in the same directory as app.py")
-        sys.exit(1) # Exit the script if files are missing
+        sys.exit(1)
     print("All required files found.")
 
-# Global variables for artifacts
+# Global variables
 VOCAB = None
-LABEL_TO_EMOTION_MAP = None # <-- ADDED: This will be our new "answer key"
+LABEL_TO_EMOTION_MAP = None
 MODEL = None
 DF_MUSIC = None
 SIM_MATRIX = None
 SONG_INDICES = None
 EMOTION_MAP = None
-MAX_LENGTH = 60 # From your training_test.py script
+MAX_LENGTH = 60
+
+# Store recent moods in memory (limited to last 50)
+RECENT_MOODS = deque(maxlen=50)
 
 def load_artifacts():
-    global VOCAB, \
-        LABEL_TO_EMOTION_MAP, \
-        MODEL, DF_MUSIC, SIM_MATRIX, SONG_INDICES, EMOTION_MAP, MAX_LENGTH
+    global VOCAB, LABEL_TO_EMOTION_MAP, MODEL, DF_MUSIC, SIM_MATRIX, SONG_INDICES, EMOTION_MAP, MAX_LENGTH
     
     print("Loading all artifacts...")
-    check_files() # Check if all files exist before trying to load
+    check_files()
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
     try:
-        # --- 1. Load AI Emotion Model Artifacts ---
-        
-        # +++ ADDED MANUAL MAPPING +++
-        # This is our new "answer key". 
-        # This mapping comes from your 'test.csv' file:
+        # Label to emotion mapping
         LABEL_TO_EMOTION_MAP = {
             0: 'sadness',
             1: 'joy',
@@ -115,18 +107,14 @@ def load_artifacts():
             5: 'surprise'
         }
         print(f"Manual label-to-emotion map loaded: {LABEL_TO_EMOTION_MAP}")
-        # +++ END OF ADDITION +++
 
-        # Load the PyTorch Checkpoint
-        # We use weights_only=False to load the vocab dictionary saved inside it
+        # Load PyTorch model
         checkpoint = torch.load(MODEL_PATH, map_location=device, weights_only=False) 
         print("PyTorch model checkpoint loaded.")
 
-        # Extract Vocab (Dictionary) from the checkpoint
         VOCAB = checkpoint['vocab']
         print(f"Vocabulary extracted from checkpoint. Size: {len(VOCAB)}")
         
-        # Get model parameters from checkpoint
         VOCAB_SIZE = len(VOCAB)
         EMBEDDING_DIM = checkpoint['embedding_dim']
         HIDDEN_DIM = checkpoint['hidden_dim']
@@ -134,7 +122,6 @@ def load_artifacts():
         NUM_LAYERS = checkpoint['num_layers']
         DROPOUT_PROB = checkpoint['dropout_prob']
         
-        # Re-create model structure
         MODEL = EmotionModel(
             VOCAB_SIZE,
             EMBEDDING_DIM,
@@ -144,35 +131,32 @@ def load_artifacts():
             DROPOUT_PROB
         )
         
-        # Load the trained weights
         MODEL.load_state_dict(checkpoint['model_state_dict'])
         MODEL.to(device)
-        MODEL.eval() # Set model to evaluation mode
+        MODEL.eval()
         print("Model weights loaded into structure. AI Model is ready.")
 
-        # --- 2. Load Music Recommendation Artifacts ---
+        # Load music data
         DF_MUSIC = pd.read_csv(MUSIC_DATA_PATH)
         SIM_MATRIX = np.load(SIMILARITY_MATRIX_PATH)
         with open(SONG_INDICES_PATH, 'rb') as f:
             SONG_INDICES = pickle.load(f)
         print("Music recommendation data loaded.")
 
-        # --- 3. Emotion to Music Sentiment Mapping ---
-        # This maps the AI output (e.g., 'joy') to a music sentiment (e.g., 'Happy')
+        # Emotion to music sentiment mapping
         EMOTION_MAP = {
             'sadness': 'Sad',
             'joy': 'Happy',
             'love': 'Happy',
-            'anger': 'Motivated', # Fixed from your screenshot
+            'anger': 'Motivated',
             'fear': 'Sad',
             'surprise': 'Relaxed'
         }
         
-        # Ensure all your model's labels are in the map
-        for label_text in LABEL_TO_EMOTION_MAP.values(): # <-- MODIFIED
+        for label_text in LABEL_TO_EMOTION_MAP.values():
             if label_text not in EMOTION_MAP:
                 print(f"Warning: Emotion '{label_text}' from your model is not in EMOTION_MAP. It will default to 'Happy'.")
-                EMOTION_MAP[label_text] = 'Happy' # Add a default fallback
+                EMOTION_MAP[label_text] = 'Happy'
                 
         print(f"Emotion map set: {EMOTION_MAP}")
         print("--- All artifacts loaded successfully. ---")
@@ -186,36 +170,29 @@ def load_artifacts():
         sys.exit(1)
 
 # --- 4. Prediction & Recommendation Functions ---
-
 def predict_emotion(text):
     """Predicts the emotion of a single text string."""
-    global MODEL, VOCAB, LABEL_TO_EMOTION_MAP, MAX_LENGTH # <-- MODIFIED
+    global MODEL, VOCAB, LABEL_TO_EMOTION_MAP, MAX_LENGTH
     
-    if not all([MODEL, VOCAB, LABEL_TO_EMOTION_MAP]): # <-- MODIFIED
+    if not all([MODEL, VOCAB, LABEL_TO_EMOTION_MAP]):
         print("Error: Model, vocab, or label map not loaded.")
         return "Error"
         
-    device = next(MODEL.parameters()).device # Get model's device
+    device = next(MODEL.parameters()).device
 
-    # 1. Preprocess the text (must be SAME as training)
     cleaned = clean_text(text)
     sequenced = text_to_sequence(cleaned, VOCAB)
     padded = pad_sequence(sequenced, MAX_LENGTH)
     
-    # 2. Convert to tensor
-    tensor = torch.tensor(padded, dtype=torch.long).unsqueeze(0) # Add batch dim [1, 60]
+    tensor = torch.tensor(padded, dtype=torch.long).unsqueeze(0)
     tensor = tensor.to(device)
 
-    # 3. Predict
-    MODEL.eval() # Ensure model is in eval mode
+    MODEL.eval()
     with torch.no_grad():
         outputs = MODEL(tensor)
-        # Get the index of the max log-probability
         _, predicted_idx = torch.max(outputs, 1) 
     
-    # 4. Decode the prediction (e.g., 0 -> "sadness")
-    predicted_index = predicted_idx.item() # This is the number (e.g., 0)
-    # Default to 'joy' if mapping is missing for some reason
+    predicted_index = predicted_idx.item()
     predicted_label = LABEL_TO_EMOTION_MAP.get(predicted_index, 'joy') 
     
     return predicted_label
@@ -273,10 +250,12 @@ def get_seed_song(df, sentiment):
         return sentiment_songs.sample(n=1).iloc[0]['Song_Name']
     return None
 
+def format_timestamp():
+    """Returns a formatted timestamp string."""
+    now = datetime.now()
+    return now.strftime("%B %d, %Y at %I:%M %p")
+
 # --- 5. Flask App ---
-# This assumes your 'index.html' file is in a folder named 'templates'
-# If 'index.html' is in the SAME folder as app.py, change this to:
-# app = Flask(__name__, template_folder='.')
 app = Flask(__name__) 
 
 # Load artifacts once on startup
@@ -290,7 +269,6 @@ def home():
 def recommend():
     try:
         data = request.json
-        # *** We are now back to using 'text' from the HTML ***
         if 'text' not in data:
             return jsonify({'error': 'No text provided.'}), 400
         
@@ -298,19 +276,19 @@ def recommend():
         if not text:
              return jsonify({'error': 'Text cannot be empty.'}), 400
         
-        # 1. Predict emotion from text
-        predicted_emotion_label = predict_emotion(text) # e.g., "joy"
+        # Predict emotion
+        predicted_emotion_label = predict_emotion(text)
         
-        # 2. Map emotion to music sentiment
-        mapped_sentiment_label = EMOTION_MAP.get(predicted_emotion_label, 'Happy') # e.g., "Happy"
+        # Map emotion to music sentiment
+        mapped_sentiment_label = EMOTION_MAP.get(predicted_emotion_label, 'Happy')
         
         recommendations = []
         seed_song_name = None
 
-        # 3. Find a "seed song" based on the mapped sentiment
+        # Find seed song
         seed_song_name = get_seed_song(DF_MUSIC, mapped_sentiment_label)
         
-        # 4. Get recommendations
+        # Get recommendations
         if seed_song_name:
             recommendations = get_model_recommendations(
                 DF_MUSIC,
@@ -326,18 +304,47 @@ def recommend():
         else:
             print(f"Warning: No songs found for sentiment '{mapped_sentiment_label}'. Using fallback.")
             recommendations = get_fallback_songs(DF_MUSIC, mapped_sentiment_label, num=5)
+        
+        # Save to recent moods
+        mood_entry = {
+            'text': text,
+            'emotion': predicted_emotion_label.capitalize(),
+            'timestamp': format_timestamp(),
+            'song_count': len(recommendations)
+        }
+        RECENT_MOODS.appendleft(mood_entry)  # Add to beginning
             
-        # 5. Return the full response
         return jsonify({
-            'emotion': predicted_emotion_label.capitalize(), # e.g., "Joy"
+            'emotion': predicted_emotion_label.capitalize(),
             'songs': recommendations,
-            'mapped_sentiment': mapped_sentiment_label, # e.g., "Happy"
+            'mapped_sentiment': mapped_sentiment_label,
             'seed_song': seed_song_name
         })
 
     except Exception as e:
         print(f"An error occurred during /recommend: {e}")
         return jsonify({'error': 'An internal server error occurred.'}), 500
+
+@app.route('/recent_moods', methods=['GET'])
+def recent_moods():
+    """Returns the list of recent mood searches."""
+    try:
+        return jsonify({
+            'moods': list(RECENT_MOODS)
+        })
+    except Exception as e:
+        print(f"Error retrieving recent moods: {e}")
+        return jsonify({'error': 'Failed to retrieve recent moods'}), 500
+
+@app.route('/clear_recent', methods=['POST'])
+def clear_recent():
+    """Clears all recent mood history."""
+    try:
+        RECENT_MOODS.clear()
+        return jsonify({'success': True, 'message': 'Recent moods cleared'})
+    except Exception as e:
+        print(f"Error clearing recent moods: {e}")
+        return jsonify({'error': 'Failed to clear recent moods'}), 500
 
 if __name__ == '__main__':
     print("Starting Flask server on http://127.0.0.1:5001")
